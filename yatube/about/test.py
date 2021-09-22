@@ -12,11 +12,11 @@ class StaticURLTests(TestCase):
         guest_client = Client()
         response = guest_client.get('/about/author/')
         # Утверждаем, что для прохождения теста код должен быть равен 200
-        self.assertEqual(response.status_code, 200) 
-    
+        self.assertEqual(response.status_code, 200)
+
     def test_tech(self):
         # Создаем экземпляр клиента
         guest_client = Client()
         response = guest_client.get('/about/tech/')
         # Утверждаем, что для прохождения теста код должен быть равен 200
-        self.assertEqual(response.status_code, 200) 
+        self.assertEqual(response.status_code, 200)
