@@ -1,22 +1,31 @@
+from http import HTTPStatus
+
 from django.test import Client, TestCase
+from django.urls import reverse
 
 
 class StaticURLTests(TestCase):
     def setUp(self):
-        # Устанавливаем данные для тестирования
-        # Создаём экземпляр клиента. Он неавторизован.
         self.guest_client = Client()
+        self.link_list = [
+            '/about/author/',
+            '/about/tech/',
+        ]
 
-    def test_author(self):
-        # Создаем экземпляр клиента
-        guest_client = Client()
-        response = guest_client.get('/about/author/')
-        # Утверждаем, что для прохождения теста код должен быть равен 200
-        self.assertEqual(response.status_code, 200)
+    def test_urls(self):
+        """Проверка доступа к страницам"""
+        for address in self.link_list:
+            with self.subTest(address=address):
+                response = self.guest_client.get(address)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_tech(self):
-        # Создаем экземпляр клиента
-        guest_client = Client()
-        response = guest_client.get('/about/tech/')
-        # Утверждаем, что для прохождения теста код должен быть равен 200
-        self.assertEqual(response.status_code, 200)
+    def test_templates(self):
+        """Проверка использования корректных шаблонов"""
+        templates_pages_names = {
+            reverse('about:author'): 'about/author.html',
+            reverse('about:tech'): 'about/tech.html',
+        }
+        for reverse_name, template in templates_pages_names.items():
+            with self.subTest(reverse_name=reverse_name):
+                response = self.guest_client.get(reverse_name)
+                self.assertTemplateUsed(response, template)

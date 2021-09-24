@@ -25,10 +25,12 @@ class PostFormTests(TestCase):
         )
 
     def setUp(self):
+        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(PostFormTests.user)
 
     def test_title_label(self):
+        """Проверка переопределенных лейблов"""
         expected_labels = {
             'text': 'Текст',
             'group': 'Группа',
@@ -39,16 +41,21 @@ class PostFormTests(TestCase):
                 self.assertTrue(title_label, label)
 
     def test_title_help_text(self):
+        """Проверка переопределенного вспомогательного текста"""
         expected_help_texts = {
             'text': ('Это текст вашего поста'),
             'group': ('Укажите группу, к которой будет относится ваш пост'),
         }
         for label_name, text in expected_help_texts.items():
-            with self.subTest(lebel_name=label_name):
+            with self.subTest(label_name=label_name):
                 title_help_text = PostFormTests.form.fields[label_name]
                 self.assertTrue(title_help_text, text)
 
     def test_create_post(self):
+        """
+        Проверка создания поста: пост должен создаться
+        при отправке валидной формы, перенаправление на профайл пользователя
+        """
         post_count = Post.objects.count()
 
         form_data = {
@@ -65,19 +72,61 @@ class PostFormTests(TestCase):
         # Проверяем, сработал ли редирект
         self.assertRedirects(response, reverse(
             'posts:profile',
-            kwargs={'username': 'auth'}
+            kwargs={'username': PostFormTests.user.username}
         ))
         # Проверяем, увеличилось ли число постов
         self.assertEqual(Post.objects.count(), post_count + 1)
-        # Проверяем, что создалась запись с заданным слагом
+        # Проверка наличия поста
         self.assertTrue(
             Post.objects.filter(
-                text='Тестовый текст',
+                text=form_data['text'],
                 group=PostFormTests.group
             ).exists()
         )
+        # Проверка полей поста
+        created_post = Post.objects.filter(
+            text='Тестовый текст',
+            group=PostFormTests.group
+        ).first()
+        for field_name, value in form_data.items():
+            with self.subTest(field_name=field_name):
+                self.assertTrue(getattr(created_post, field_name), value)
+
+        self.assertTrue(
+            getattr(created_post, 'author'), PostFormTests.user.username
+        )
+
+    def test_guest_create_post(self):
+        """
+        Проверка создания поста неавторизованным пользователем.
+        Должно произойти перенаправление на авторизацию
+        """
+        post_count = Post.objects.count()
+
+        form_data = {
+            'text': 'Тестовый текст',
+            'group': PostFormTests.group.id
+        }
+
+        response = self.guest_client.post(
+            reverse('posts:post_create'),
+            data=form_data,
+            follow=True
+        )
+
+        # Проверяем, сработал ли редирект
+        self.assertRedirects(
+            response, '/auth/login/?next=/create/'
+        )
+        # Проверяем, что число постов не увеличилось
+        self.assertEqual(Post.objects.count(), post_count)
 
     def test_edit_post(self):
+        """
+        Проверка редактирования поста автором.
+        Пост должен быть отредактирован,
+        произойти перенаправление на страницу поста
+        """
         post_id = Post.objects.first().id
         form_data = {
             'text': 'Тестовый текст 1',
@@ -97,7 +146,33 @@ class PostFormTests(TestCase):
         ))
         self.assertTrue(
             Post.objects.filter(
-                text='Тестовый текст 1',
+                text=form_data['text'],
                 group=PostFormTests.group
             ).exists()
         )
+
+    def test_guest_edit_post(self):
+        """
+        Проверка редактирования поста гостем.
+        Пост не должен быть отредактирован,
+        должно произойти перенаправление на страницу поста
+        """
+        post_orig = Post.objects.first()
+        post_id = post_orig.id
+        form_data = {
+            'text': 'Тестовый текст 2',
+            'group': PostFormTests.group.id
+        }
+
+        response = self.guest_client.post(
+            reverse('posts:post_edit', kwargs={'post_id': post_id}),
+            data=form_data,
+            follow=True
+        )
+
+        # Проверяем, сработал ли редирект
+        self.assertRedirects(
+            response, f'/posts/{post_id}/'
+        )
+
+        self.assertEqual(Post.objects.get(pk=post_id).text, post_orig.text)

@@ -1,6 +1,6 @@
 <!-- templates/posts/group_list.html --> 
 {% extends 'base.html' %}
-{% block title %}{{ title }}{% endblock %} 
+{% block title %}Записи сообщества {{ group.title }}{% endblock %} 
 {% block content %}
   <div class="container py-5">
     {% block header %}<h1>{{ group.title }}</h1>{% endblock %}

@@ -1,4 +1,7 @@
+from http import HTTPStatus
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import AuthenticationForm
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -24,7 +27,40 @@ class CreationFormTests(TestCase):
         self.author_client = Client()
         self.author_client.force_login(self.user)
 
+        self.link_list = [
+            '/auth/signup/',
+            '/auth/logout/',
+            '/auth/login/',
+        ]
+
+    def test_urls(self):
+        """Проверка доступа к страницам"""
+        for address in self.link_list:
+            with self.subTest(address=address):
+                response = self.guest_client.get(address)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_templates(self):
+        """Проверка использования корректных шаблонов"""
+        templates_pages_names = {
+            reverse('users:signup'): 'users/signup.html',
+            reverse('users:logout'): 'users/logged_out.html',
+            reverse('users:login'): 'users/login.html',
+        }
+        for reverse_name, template in templates_pages_names.items():
+            with self.subTest(reverse_name=reverse_name):
+                response = self.guest_client.get(reverse_name)
+                self.assertTemplateUsed(response, template)
+
     def test_create_user(self):
+        """
+        Проверка успешного создания пользователя
+        Должен произойти редирект на главную страницу
+        Здесь же проверка контекста
+        """
+        response = self.guest_client.get(reverse('users:login'))
+        self.assertIsInstance(response.context['form'], AuthenticationForm)
+
         user_count = User.objects.count()
 
         form_data = {
@@ -49,9 +85,9 @@ class CreationFormTests(TestCase):
         # Проверяем, что создалась запись с заданным слагом
         self.assertTrue(
             User.objects.filter(
-                first_name='First',
-                last_name='Last',
-                username='usrnm',
-                email='eml@eml.inl',
+                first_name=form_data['first_name'],
+                last_name=form_data['last_name'],
+                username=form_data['username'],
+                email=form_data['email'],
             ).exists()
         )

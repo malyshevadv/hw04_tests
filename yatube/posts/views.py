@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -20,13 +21,11 @@ def set_pagination(request, obj_list, amount=settings.PAGE_SIZE):
 
 def index(request):
     template = 'posts/index.html'
-    title = 'Последние обновления на сайте'
 
     post_list = Post.objects.all()
     page_obj = set_pagination(request, post_list)
 
     context = {
-        'title': title,
         'page_obj': page_obj,
     }
     return render(request, template, context)
@@ -35,13 +34,11 @@ def index(request):
 def group_posts(request, slug):
     template = 'posts/group_list.html'
     group = get_object_or_404(Group, slug=slug)
-    title = f'Записи сообщества {group.title}'
 
     post_list = group.posts.all()
     page_obj = set_pagination(request, post_list)
 
     context = {
-        'title': title,
         'page_obj': page_obj,
         'group': group,
     }
@@ -51,13 +48,11 @@ def group_posts(request, slug):
 def profile(request, username):
     template = 'posts/profile.html'
     author = get_user_model().objects.get(username=username)
-    title = f'Профайл пользователя {author.get_full_name()}'
 
-    post_list = Post.objects.filter(author=author)
+    post_list = author.posts.all()
     page_obj = set_pagination(request, post_list)
 
     context = {
-        'title': title,
         'page_obj': page_obj,
         'author': author,
     }
@@ -67,13 +62,11 @@ def profile(request, username):
 def post_detail(request, post_id):
     template = 'posts/post_detail.html'
     specific_post = get_object_or_404(Post, pk=post_id)
-    title = f'Пост {specific_post.text[0:30]}'
 
-    post_list = Post.objects.filter(author=specific_post.author)
+    post_list = specific_post.author.posts.all()
     page_obj = set_pagination(request, post_list)
 
     context = {
-        'title': title,
         'post': specific_post,
         'page_obj': page_obj,
     }
@@ -103,18 +96,19 @@ class PostCreate(CreateView):
         return redirect(success_url)
 
 
-class PostEdit(UpdateView):
+class PostEdit(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     form_class = PostForm
     template_name = 'posts/create_post.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        updated_post = self.get_object()
-        if updated_post.author != self.request.user:
-            return redirect(reverse(
-                'posts:post_detail',
-                kwargs={'post_id': updated_post.pk}
-            ))
-        return super().dispatch(request, *args, **kwargs)
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+    def handle_no_permission(self):
+        return redirect(reverse(
+            'posts:post_detail',
+            kwargs={'post_id': self.kwargs['post_id']}
+        ))
 
     def get_object(self, queryset=None):
         return get_object_or_404(Post, pk=self.kwargs['post_id'])

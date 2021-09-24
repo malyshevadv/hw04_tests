@@ -1,8 +1,8 @@
 <!-- templates/posts/profile.html --> 
 {% extends 'base.html' %}
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Профайл пользователя {{ author.get_full_name }}{% endblock %}
 {% block content %}
-  <h1>{{ title }}</h1>
+  <h1>Профайл пользователя {{ author.get_full_name }}</h1>
   <div class="container py-5">
     <h3>Всего постов: {{ page_obj.paginator.count }} </h3>  
       {% for post in page_obj %}

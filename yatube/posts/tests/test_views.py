@@ -136,6 +136,7 @@ class ContextPaginatorViewsTest(TestCase):
                 self.assertIsInstance(post_date_0, datetime)
 
     def test_post_detail_page_show_correct_context(self):
+        """Проверка контекста страницы с одним постом."""
         post_id = ContextPaginatorViewsTest.posts[0].pk
         response = self.authorized_client.get(
             reverse('posts:post_edit', kwargs={'post_id': post_id})
@@ -147,6 +148,7 @@ class ContextPaginatorViewsTest(TestCase):
         self.assertIsInstance(post.pub_date, datetime)
 
     def test_post_form_correct_context(self):
+        """Проверка корректности ожидаемого контекста форм"""
         post_id = ContextPaginatorViewsTest.posts[0].pk
         pages_to_test = [
             reverse(
@@ -168,6 +170,14 @@ class ContextPaginatorViewsTest(TestCase):
                     self.assertIsInstance(form_field, expected)
 
     def test_new_post_with_group_added(self):
+        """
+        Проверка, что если при создании поста указать группу,
+        то этот пост появляется:
+            на главной странице сайта,
+            на странице выбранной группы,
+            в профайле пользователя.
+        И не попадает в группу, для которой не был предназначен
+        """
         links_to_test_list = [
             reverse('posts:index'),
             reverse(
