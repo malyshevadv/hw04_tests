@@ -121,6 +121,7 @@ class ContextPaginatorViewsTest(TestCase):
 
     def test_post_list_page_show_correct_context(self):
         """Проверка контекста страниц со списками."""
+        first_post = ContextPaginatorViewsTest.posts[0]
         for reverse_name in self.paginator_link_list:
             with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
@@ -131,20 +132,21 @@ class ContextPaginatorViewsTest(TestCase):
                 post_group_0 = first_object.group.title
                 post_date_0 = first_object.pub_date
                 self.assertEqual(post_author_0, self.username)
-                self.assertEqual(post_text_0, 'Тестовый текст')
-                self.assertEqual(post_group_0, 'Тестовая группа')
+                self.assertEqual(post_text_0, first_post.text)
+                self.assertEqual(post_group_0, first_post.group.title)
                 self.assertIsInstance(post_date_0, datetime)
 
     def test_post_detail_page_show_correct_context(self):
         """Проверка контекста страницы с одним постом."""
-        post_id = ContextPaginatorViewsTest.posts[0].pk
+        first_post = ContextPaginatorViewsTest.posts[0]
+        post_id = first_post.pk
         response = self.authorized_client.get(
             reverse('posts:post_edit', kwargs={'post_id': post_id})
         )
         post = response.context.get('post')
         self.assertEqual(post.author.username, self.username)
-        self.assertEqual(post.text, 'Тестовый текст')
-        self.assertEqual(post.group.title, 'Тестовая группа')
+        self.assertEqual(post.text, first_post.text)
+        self.assertEqual(post.group.title, first_post.group.title)
         self.assertIsInstance(post.pub_date, datetime)
 
     def test_post_form_correct_context(self):

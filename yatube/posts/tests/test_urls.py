@@ -3,6 +3,7 @@ from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
+from django.urls import reverse
 
 from ..models import Group, Post
 
@@ -80,7 +81,8 @@ class PostsURLTests(TestCase):
         """
         response = self.guest_client.get('/create/', follow=True)
         self.assertRedirects(
-            response, '/auth/login/?next=/create/'
+            response,
+            reverse('users:login') + '?next=' + reverse('posts:post_create'),
         )
 
     def test_guest_redirect_on_edit(self):
@@ -91,7 +93,11 @@ class PostsURLTests(TestCase):
             f'/posts/{PostsURLTests.post.pk}/edit/', follow=True
         )
         self.assertRedirects(
-            response, f'/posts/{PostsURLTests.post.pk}/'
+            response,
+            reverse(
+                'posts:post_detail',
+                kwargs={'post_id': PostsURLTests.post.pk}
+            ),
         )
 
     def test_authorized_redirect_on_edit(self):
@@ -102,7 +108,11 @@ class PostsURLTests(TestCase):
             f'/posts/{PostsURLTests.post.pk}/edit/', follow=True
         )
         self.assertRedirects(
-            response, f'/posts/{PostsURLTests.post.pk}/'
+            response,
+            reverse(
+                'posts:post_detail',
+                kwargs={'post_id': PostsURLTests.post.pk}
+            ),
         )
 
     def test_urls_uses_correct_template(self):

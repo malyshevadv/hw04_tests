@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -80,13 +81,13 @@ class PostFormTests(TestCase):
         self.assertTrue(
             Post.objects.filter(
                 text=form_data['text'],
-                group=PostFormTests.group
+                group=form_data['group']
             ).exists()
         )
         # Проверка полей поста
         created_post = Post.objects.filter(
-            text='Тестовый текст',
-            group=PostFormTests.group
+            text=form_data['text'],
+            group=form_data['group']
         ).first()
         for field_name, value in form_data.items():
             with self.subTest(field_name=field_name):
@@ -116,7 +117,8 @@ class PostFormTests(TestCase):
 
         # Проверяем, сработал ли редирект
         self.assertRedirects(
-            response, '/auth/login/?next=/create/'
+            response,
+            reverse('users:login') + '?next=' + reverse('posts:post_create'),
         )
         # Проверяем, что число постов не увеличилось
         self.assertEqual(Post.objects.count(), post_count)
@@ -140,14 +142,14 @@ class PostFormTests(TestCase):
         )
 
         # Проверяем, сработал ли редирект
-        self.assertRedirects(response, reverse(
-            'posts:post_detail',
-            kwargs={'post_id': post_id}
-        ))
+        self.assertRedirects(
+            response,
+            reverse('posts:post_detail', kwargs={'post_id': post_id})
+        )
         self.assertTrue(
             Post.objects.filter(
                 text=form_data['text'],
-                group=PostFormTests.group
+                group=form_data['group']
             ).exists()
         )
 
@@ -172,7 +174,8 @@ class PostFormTests(TestCase):
 
         # Проверяем, сработал ли редирект
         self.assertRedirects(
-            response, f'/posts/{post_id}/'
+            response,
+            reverse('posts:post_detail', kwargs={'post_id': post_id})
         )
-
-        self.assertEqual(Post.objects.get(pk=post_id).text, post_orig.text)
+        post_after = get_object_or_404(Post, pk=post_id)
+        self.assertEqual(post_after.text, post_orig.text)
